@@ -1,4 +1,11 @@
-use std::{cell::{Ref, RefCell, RefMut}, fmt::Display, ops::Deref, rc::Rc};
+use std::{
+    cell::{Ref, RefCell, RefMut},
+    fmt::Display,
+    ops::Deref,
+    rc::Rc,
+};
+
+use crate::ast::{Node, NodeVariant, variable::Variable};
 
 #[derive(Debug)]
 pub struct NodeRef<T> {
@@ -39,9 +46,20 @@ impl<T> NodeRef<T> {
     }
 }
 
-
 impl<T: Display> Display for NodeRef<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.inner.borrow())
+    }
+}
+
+impl NodeRef<Node> {
+    #[inline]
+    pub fn substitute(&self, var: &NodeRef<Variable>, replacement: NodeRef<Node>) {
+        Node::substitute(self, var, replacement);
+    }
+
+    #[inline]
+    pub fn variant(&self) -> NodeVariant {
+        self.into()
     }
 }

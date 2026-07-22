@@ -1,5 +1,9 @@
-use redex::node::Node;
+use redex::ast::expr::Statement;
 
 fn main() {
-    dbg!(Node::parse_str("Labc.abc").unwrap().to_string());
+    let statement = Statement::parse(
+        r#"M := (Lx.x)yz
+    qk
+"#,
+    );
 }

@@ -1,10 +1,11 @@
 use std::fmt::Display;
 
 use anyhow::bail;
+use derive_more::Constructor;
 
-use crate::{find_closing_delim, node::node_ref::NodeRef};
+use crate::utils::find_closing_delim;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Constructor, Clone)]
 pub struct Variable {
     pub(crate) ident: String,
     pub(crate) subtext: Option<String>,
@@ -45,8 +46,7 @@ impl Variable {
         } else if let Some((_, ch)) = chars.next() {
             ident = ch.to_string()
         } else {
-            dbg!(s);
-            bail!("Invalid variable input!")
+            bail!("Invalid variable input: {:?}", s)
         }
 
         if chars.peek().is_some_and(|(_, c)| *c == '_') {
@@ -75,7 +75,7 @@ impl Display for Variable {
                 } else {
                     write!(f, "{}_{}", self.ident, sub)
                 }
-            },
+            }
 
             None => write!(f, "{}", self.ident),
         }

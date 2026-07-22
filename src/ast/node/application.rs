@@ -2,12 +2,16 @@ use std::fmt::Display;
 
 use anyhow::bail;
 
-use crate::{LAMBDA_CHAR, group_by_delim, node::{Node, NodeRef, abstraction::Abstraction, variable::Variable}};
+use crate::{
+    LAMBDA_CHAR,
+    ast::{Node, node_ref::NodeRef, NodeVariant, abstraction::Abstraction, variable::Variable},
+    utils::group_by_delim,
+};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Application {
-    left: NodeRef<Node>,
-    right: NodeRef<Node>
+    pub(crate) left: NodeRef<Node>,
+    pub(crate) right: NodeRef<Node>,
 }
 
 impl Application {
@@ -17,18 +21,19 @@ impl Application {
                 bail!("No closing ')' found!")
             };
 
-            if groups.len() < 2 {
-                bail!("Invalid applicaiton input!");
+            if groups.is_empty() {
+                bail!("Invalid application input!")
+            }
+
+            if groups.len() == 1 {
+                return Application::parse_str(groups[0]);
             }
 
             // group into right
             let left = NodeRef::new(Node::parse_str(groups[0])?);
             let right = NodeRef::new(Node::parse_str(&s[groups[0].len() + 2..])?);
 
-            return Ok(Application {
-                left,
-                right
-            });
+            return Ok(Application { left, right });
         }
 
         if s.starts_with(LAMBDA_CHAR) {
@@ -37,8 +42,8 @@ impl Application {
 
             return Ok(Application {
                 left: NodeRef::new(Node::Abstraction(left)),
-                right: NodeRef::new(right)
-            })
+                right: NodeRef::new(right),
+            });
         }
 
         if let Ok(v) = Variable::parse_str(s) {
@@ -49,7 +54,7 @@ impl Application {
             let right = Node::parse_str(&s[v.len()..])?;
             return Ok(Application {
                 left: NodeRef::new(Node::Variable(v)),
-                right: NodeRef::new(right)
+                right: NodeRef::new(right),
             });
         }
 
@@ -62,6 +67,28 @@ impl Application {
 
     pub fn is_empty(&self) -> bool {
         self.len() == 0
+    }
+
+    pub fn reduce_self(ap: &NodeRef<Node>) {
+        let mut swap = None;
+
+        {
+            let Node::Application(app) = &*ap.borrow() else {
+                unreachable!()
+            };
+
+            if app.left.variant() == NodeVariant::Abstraction {
+                Abstraction::reduce(&app.left, None, app.right.clone());
+                swap = Some(app.left.clone());
+            } else if app.left.variant() == NodeVariant::Application {
+                Application::reduce_self(&app.left);
+                Application::reduce_self(&app.right);
+            };
+        }
+
+        if let Some(swap) = swap {
+            ap.swap(&swap);
+        }
     }
 }
 
