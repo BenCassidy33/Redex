@@ -1,3 +1,7 @@
+use std::fmt::Display;
+
+use anyhow::bail;
+
 use crate::{find_closing_delim, node::node_ref::NodeRef};
 
 #[derive(Debug)]
@@ -38,13 +42,11 @@ impl Variable {
             {
                 ident.push(chars.next().unwrap().1);
             }
+        } else if let Some((_, ch)) = chars.next() {
+            ident = ch.to_string()
         } else {
-            while let Some((_, ch)) = chars.peek()
-                && *ch != '_'
-                && !ch.is_whitespace()
-            {
-                ident.push(chars.next().unwrap().1)
-            }
+            dbg!(s);
+            bail!("Invalid variable input!")
         }
 
         if chars.peek().is_some_and(|(_, c)| *c == '_') {
@@ -61,5 +63,21 @@ impl Variable {
         }
 
         Ok(Variable { ident, subtext })
+    }
+}
+
+impl Display for Variable {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.subtext {
+            Some(sub) => {
+                if sub.len() > 1 {
+                    write!(f, "{}_{{{}}}", self.ident, sub)
+                } else {
+                    write!(f, "{}_{}", self.ident, sub)
+                }
+            },
+
+            None => write!(f, "{}", self.ident),
+        }
     }
 }

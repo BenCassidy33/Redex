@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use anyhow::bail;
 
 use crate::{
@@ -9,11 +11,13 @@ use crate::{
 pub struct Abstraction {
     bound: NodeRef<Node>,
     body: NodeRef<Node>,
+
+    was_curried: bool,
 }
 
 impl Abstraction {
-    pub fn parse_str(s: &str) -> anyhow::Result<Abstraction> {
-        if !s.starts_with(LAMBDA_CHAR) {
+    pub fn parse_str(s: &str, starts_with_lambda: bool) -> anyhow::Result<Abstraction> {
+        if !s.starts_with(LAMBDA_CHAR) && starts_with_lambda {
             bail!("string does not start with a lambda character")
         }
 
@@ -21,10 +25,18 @@ impl Abstraction {
             bail!("string does not contain '.'")
         };
 
-        let bound = Variable::parse_str(&s[1..dot_idx])?;
+        let start = if starts_with_lambda { 1 } else { 0 };
+        let bound = Variable::parse_str(&s[start..dot_idx])?;
 
-        if bound.len() != dot_idx - 1 {
-            bail!("bound variable is not one single variable")
+        // currying
+        if bound.len() != dot_idx {
+            let body = Abstraction::parse_str(&s[bound.len() + start..], false)?;
+
+            return Ok(Abstraction {
+                bound: NodeRef::new(Node::Variable(bound)),
+                body: NodeRef::new(Node::Abstraction(body)),
+                was_curried: true,
+            });
         }
 
         let body = Node::parse_str(&s[dot_idx + 1..])?;
@@ -32,6 +44,7 @@ impl Abstraction {
         Ok(Abstraction {
             bound: NodeRef::new(Node::Variable(bound)),
             body: NodeRef::new(body),
+            was_curried: false,
         })
     }
 
@@ -41,5 +54,16 @@ impl Abstraction {
 
     pub fn is_empty(&self) -> bool {
         self.len() == 0
+    }
+}
+
+impl Display for Abstraction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.was_curried {
+            let Node::Abstraction(ab) = &*self.body.borrow() else { unreachable!() };
+            write!(f, "{}{}{}.{}", LAMBDA_CHAR, self.bound, ab.bound, ab.body)
+        } else {
+            write!(f, "{}{}.{}", LAMBDA_CHAR, self.bound, self.body)
+        }
     }
 }

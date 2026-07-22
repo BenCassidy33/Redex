@@ -1,4 +1,4 @@
-use std::{cell::{Ref, RefCell, RefMut}, ops::Deref, rc::Rc};
+use std::{cell::{Ref, RefCell, RefMut}, fmt::Display, ops::Deref, rc::Rc};
 
 #[derive(Debug)]
 pub struct NodeRef<T> {
@@ -39,3 +39,9 @@ impl<T> NodeRef<T> {
     }
 }
 
+
+impl<T: Display> Display for NodeRef<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.inner.borrow())
+    }
+}

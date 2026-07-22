@@ -1,5 +1,5 @@
-use redex::node::{abstraction::Abstraction};
+use redex::node::Node;
 
 fn main() {
-    dbg!(Abstraction::parse_str("LHELL_k.m"));
+    dbg!(Node::parse_str("Labc.abc").unwrap().to_string());
 }
