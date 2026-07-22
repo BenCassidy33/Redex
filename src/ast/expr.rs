@@ -20,7 +20,16 @@ impl Display for Assignment {
 #[derive(Debug, Clone, IsVariant)]
 pub enum Statement {
     Assignment(Assignment),
-    Expression(Node),
+    Expression(NodeRef<Node>),
+}
+
+impl Display for Statement {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Statement::Assignment(assignment) => write!(f, "{}", assignment),
+            Statement::Expression(node_ref) => write!(f, "{}", node_ref),
+        }
+    }
 }
 
 impl From<Statement> for Assignment {
@@ -41,7 +50,7 @@ impl From<&Statement> for Assignment {
     }
 }
 
-impl From<&Statement> for Node {
+impl From<&Statement> for NodeRef<Node> {
     fn from(val: &Statement) -> Self {
         let Statement::Expression(expr) = val else {
             panic!("Statement is not an assignment")
@@ -50,7 +59,7 @@ impl From<&Statement> for Node {
     }
 }
 
-impl From<Statement> for Node {
+impl From<Statement> for NodeRef<Node> {
     fn from(val: Statement) -> Self {
         let Statement::Expression(expr) = val else {
             panic!("Statement is not an assignment")
@@ -61,7 +70,7 @@ impl From<Statement> for Node {
 
 struct Unzipped {
     pub(crate) assignments: Vec<Assignment>,
-    pub(crate) expressions: Vec<Node>,
+    pub(crate) expressions: Vec<NodeRef<Node>>,
 }
 
 trait Unzip: Sized + IntoIterator<Item = Statement> {
@@ -119,9 +128,15 @@ impl Statement {
             }
 
             let body = Node::parse_str(line.trim())?;
-            v.push(Statement::Expression(body));
+            v.push(Statement::Expression(NodeRef::new(body)));
         }
 
         Ok(v)
+    }
+
+    pub fn reduce(&self) {
+        if let Statement::Expression(node) = self {
+            Node::reduce(node, None, None)
+        }
     }
 }

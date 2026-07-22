@@ -46,7 +46,6 @@ pub enum Node {
 
 impl Node {
     pub fn parse_str(s: &str) -> anyhow::Result<Node> {
-        dbg!(s);
         if s.starts_with(LAMBDA_CHAR) {
             return Ok(Node::Abstraction(Abstraction::parse_str(s, true)?));
         }

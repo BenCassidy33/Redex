@@ -5,5 +5,5 @@ fn main() {
         r#"M := (Lx.x)yz
     qk
 "#,
-    );
+    ).unwrap();
 }
