@@ -1,5 +1,5 @@
-use redex::node::variable::Variable;
+use redex::node::{abstraction::Abstraction};
 
 fn main() {
-    dbg!(Variable::parse_str("HELLO WORLD"));
+    dbg!(Abstraction::parse_str("LHELL_k.m"));
 }

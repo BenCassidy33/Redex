@@ -1,4 +1,4 @@
-use crate::find_closing_delim;
+use crate::{find_closing_delim, node::node_ref::NodeRef};
 
 #[derive(Debug)]
 pub struct Variable {
@@ -11,9 +11,9 @@ impl Variable {
         self.ident.len()
             + if let Some(ref st) = self.subtext {
                 if st.len() != 1 {
-                    st.len() + 2
+                    st.len() + 3
                 } else {
-                    st.len()
+                    st.len() + 1
                 }
             } else {
                 0
