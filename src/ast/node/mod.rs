@@ -5,12 +5,14 @@ use derive_more::IsVariant;
 use crate::{
     LAMBDA_CHAR,
     ast::{
-        abstraction::Abstraction, application::Application, node_ref::NodeRef, variable::Variable,
+        abstraction::Abstraction, application::Application, assignments::Assignments,
+        node_ref::NodeRef, variable::Variable,
     },
 };
 
 pub mod abstraction;
 pub mod application;
+pub mod assignments;
 pub mod node_ref;
 pub mod variable;
 
@@ -108,6 +110,41 @@ impl Node {
         replace.replace(with.borrow().clone());
     }
 
+    pub fn substitute_assignments(
+        node: &NodeRef<Node>,
+        assignments: &Assignments,
+        no_replace: Option<&NodeRef<Variable>>,
+    ) {
+        let Some((replace, with)) = (match &*node.borrow() {
+            Node::Variable(v) => {
+                if let Some(rep) = no_replace
+                    && *v == *rep.borrow()
+                {
+                    None
+                } else {
+                    assignments.get(v).map(|body| (node, body))
+                }
+            }
+
+            Node::Application(ap) => {
+                Node::substitute_assignments(&ap.left, assignments, no_replace);
+                Node::substitute_assignments(&ap.right, assignments, no_replace);
+
+                None
+            }
+
+            Node::Abstraction(ab) => {
+                Node::substitute_assignments(&ab.body, assignments, Some(&ab.bound));
+
+                None
+            }
+        }) else {
+            return;
+        };
+
+        replace.replace(with.borrow().clone());
+    }
+
     pub fn reduce(
         node: &NodeRef<Self>,
         var: Option<&NodeRef<Variable>>,
@@ -123,7 +160,9 @@ impl Node {
             }
 
             NodeVariant::Application => {
-                if let Some(var) = var && let Some(replacement) = replacement {
+                if let Some(var) = var
+                    && let Some(replacement) = replacement
+                {
                     Node::substitute(node, var, replacement);
                 }
 

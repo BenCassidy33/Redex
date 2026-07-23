@@ -1,9 +1,8 @@
-use redex::ast::expr::Statement;
+#![allow(warnings, dead_code)]
+
+use std::collections::HashMap;
+
+use redex::ast::{Node, assignments::{Assignments, insert_assignment}, expr::Statement};
 
 fn main() {
-    let statement = Statement::parse(
-        r#"M := (Lx.x)yz
-    qk
-"#,
-    ).unwrap();
 }

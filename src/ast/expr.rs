@@ -1,4 +1,4 @@
-use std::{fmt::Display, process::Output};
+use std::fmt::Display;
 
 use anyhow::bail;
 use derive_more::{Constructor, IsVariant};
@@ -7,8 +7,8 @@ use crate::ast::{Node, node_ref::NodeRef, variable::Variable};
 
 #[derive(Debug, Clone, Constructor)]
 pub struct Assignment {
-    bound: Variable,
-    body: NodeRef<Node>,
+    pub(crate) bound: Variable,
+    pub(crate) body: NodeRef<Node>,
 }
 
 impl Display for Assignment {
@@ -68,11 +68,13 @@ impl From<Statement> for NodeRef<Node> {
     }
 }
 
+#[allow(unused)]
 struct Unzipped {
     pub(crate) assignments: Vec<Assignment>,
     pub(crate) expressions: Vec<NodeRef<Node>>,
 }
 
+#[allow(unused)]
 trait Unzip: Sized + IntoIterator<Item = Statement> {
     fn unzip(self) -> Unzipped {
         let (a, e): (Vec<_>, Vec<_>) = self.into_iter().partition(|n| n.is_assignment());

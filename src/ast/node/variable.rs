@@ -1,14 +1,22 @@
 use std::fmt::Display;
 
 use anyhow::bail;
-use derive_more::Constructor;
+use derive_more::{Constructor, Eq};
 
 use crate::utils::find_closing_delim;
 
-#[derive(Debug, PartialEq, Constructor, Clone)]
+#[derive(Debug, PartialEq, Constructor, Clone, Hash, Eq)]
 pub struct Variable {
     pub(crate) ident: String,
     pub(crate) subtext: Option<String>,
+}
+
+impl TryFrom<&str> for Variable {
+    type Error = ();
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Variable::parse_str(value).map_err(|_| ())
+    }
 }
 
 impl Variable {
