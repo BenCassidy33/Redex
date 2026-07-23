@@ -4,11 +4,11 @@ use anyhow::bail;
 
 use crate::{
     LAMBDA_CHAR,
-    ast::{Node, node_ref::NodeRef, NodeVariant, abstraction::Abstraction, variable::Variable},
+    ast::{Node, NodeVariant, abstraction::Abstraction, node_ref::NodeRef, variable::Variable},
     utils::group_by_delim,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Application {
     pub(crate) left: NodeRef<Node>,
     pub(crate) right: NodeRef<Node>,
@@ -94,6 +94,12 @@ impl Application {
 
 impl Display for Application {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "({})({})", self.left, self.right)
+        if f.alternate() && self.len() > 2 {
+            write!(f, "{:#}({:#})", self.left, self.right)
+        } else if self.len() > 2 {
+            write!(f, "{}({})", self.left, self.right)
+        } else {
+            write!(f, "{}{}", self.left, self.right)
+        }
     }
 }

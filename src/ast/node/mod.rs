@@ -39,7 +39,7 @@ impl From<&Node> for NodeVariant {
     }
 }
 
-#[derive(Debug, IsVariant, Clone)]
+#[derive(Debug, IsVariant, Clone, PartialEq)]
 pub enum Node {
     Application(Application),
     Abstraction(Abstraction),
@@ -179,6 +179,23 @@ impl Node {
         }
     }
 
+    pub fn deep_clone(&self) -> Node {
+        match self {
+            Node::Application(ap) => Node::Application(Application {
+                left: NodeRef::new(ap.left.borrow().deep_clone()),
+                right: NodeRef::new(ap.right.borrow().deep_clone()),
+            }),
+
+            Node::Abstraction(ab) => Node::Abstraction(Abstraction {
+                bound: NodeRef::new(ab.bound.borrow().clone()),
+                body: NodeRef::new(ab.body.borrow().deep_clone()),
+                was_curried: ab.was_curried,
+            }),
+
+            Node::Variable(v) => Node::Variable(v.clone()),
+        }
+    }
+
     #[inline]
     pub fn variant(node: &NodeRef<Self>) -> NodeVariant {
         node.into()
@@ -187,10 +204,18 @@ impl Node {
 
 impl Display for Node {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Abstraction(ab) => write!(f, "{}", ab),
-            Self::Application(ap) => write!(f, "{}", ap),
-            Self::Variable(v) => write!(f, "{}", v),
+        if f.alternate() {
+            match self {
+                Self::Abstraction(ab) => write!(f, "{:#}", ab),
+                Self::Application(ap) => write!(f, "{:#}", ap),
+                Self::Variable(v) => write!(f, "{:#}", v),
+            }
+        } else {
+            match self {
+                Self::Abstraction(ab) => write!(f, "{}", ab),
+                Self::Application(ap) => write!(f, "{}", ap),
+                Self::Variable(v) => write!(f, "{}", v),
+            }
         }
     }
 }

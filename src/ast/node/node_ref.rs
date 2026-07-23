@@ -7,9 +7,15 @@ use std::{
 
 use crate::ast::{Node, NodeVariant, variable::Variable};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct NodeRef<T> {
     pub(crate) inner: Rc<RefCell<T>>,
+}
+
+impl<T: PartialEq> PartialEq<T> for NodeRef<T> {
+    fn eq(&self, other: &T) -> bool {
+        *self.borrow() == *other
+    }
 }
 
 impl<T> Clone for NodeRef<T> {
@@ -43,6 +49,14 @@ impl<T> NodeRef<T> {
     #[inline]
     pub fn borrow_mut(&self) -> RefMut<'_, T> {
         self.inner.borrow_mut()
+    }
+
+}
+
+impl NodeRef<Node> {
+    #[inline]
+    pub fn deep_clone(&self) -> Node {
+        self.borrow().deep_clone()
     }
 }
 

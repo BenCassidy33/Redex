@@ -1,12 +1,13 @@
-use std::{fmt::Display};
+use std::fmt::Display;
 
 use anyhow::bail;
 
 use crate::{
-    LAMBDA_CHAR, ast::{Node, NodeVariant, node_ref::NodeRef, variable::Variable},
+    LAMBDA_CHAR,
+    ast::{Node, NodeVariant, application::Application, node_ref::NodeRef, variable::Variable},
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Abstraction {
     pub(crate) bound: NodeRef<Variable>,
     pub(crate) body: NodeRef<Node>,
@@ -56,18 +57,34 @@ impl Abstraction {
     }
 
     pub fn reduce_self(ab: &NodeRef<Node>) {
-        let Node::Abstraction(ab) = &*ab.borrow() else {
-            unreachable!()
+        let rep = {
+            let Node::Abstraction(ab) = &*ab.borrow() else {
+                unreachable!()
+            };
+
+            match ab.body.variant() {
+                NodeVariant::Application => {
+                    Application::reduce_self(&ab.body.clone());
+                    None
+                }
+                NodeVariant::Abstraction => {
+                    Abstraction::reduce_self(&ab.body.clone());
+                    None
+                }
+                NodeVariant::Variable => Some(ab.body.borrow().clone()),
+            }
         };
 
-        match ab.body.variant() {
-            NodeVariant::Application => todo!(),
-            NodeVariant::Abstraction => Abstraction::reduce_self(&ab.body.clone()),
-            NodeVariant::Variable => todo!(),
+        if let Some(rep) = rep {
+            ab.replace(rep);
         }
     }
 
-    pub fn reduce(ab: &NodeRef<Node>, bound: Option<&NodeRef<Variable>>, replacement: NodeRef<Node>) {
+    pub fn reduce(
+        ab: &NodeRef<Node>,
+        bound: Option<&NodeRef<Variable>>,
+        replacement: NodeRef<Node>,
+    ) {
         let swap = match bound {
             Some(bound) => {
                 ab.substitute(bound, replacement);
@@ -75,7 +92,9 @@ impl Abstraction {
             }
 
             None => {
-                let Node::Abstraction(ab) = &*ab.borrow() else { unreachable!() };
+                let Node::Abstraction(ab) = &*ab.borrow() else {
+                    unreachable!()
+                };
                 ab.body.substitute(&ab.bound, replacement);
                 Some(ab.body.clone())
             }
@@ -89,13 +108,24 @@ impl Abstraction {
 
 impl Display for Abstraction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.was_curried {
-            let Node::Abstraction(ab) = &*self.body.borrow() else {
-                unreachable!()
-            };
-            write!(f, "{}{}{}.{}", LAMBDA_CHAR, self.bound, ab.bound, ab.body)
+        if f.alternate() {
+            if self.was_curried {
+                let Node::Abstraction(ab) = &*self.body.borrow() else {
+                    unreachable!()
+                };
+                write!(f, "{}{}{}.{:#}", LAMBDA_CHAR, self.bound, ab.bound, ab.body)
+            } else {
+                write!(f, "{}{}.{:#}", LAMBDA_CHAR, self.bound, self.body)
+            }
         } else {
-            write!(f, "{}{}.{}", LAMBDA_CHAR, self.bound, self.body)
+            if self.was_curried {
+                let Node::Abstraction(ab) = &*self.body.borrow() else {
+                    unreachable!()
+                };
+                write!(f, "{}{}{}.{}", LAMBDA_CHAR, self.bound, ab.bound, ab.body)
+            } else {
+                write!(f, "{}{}.{}", LAMBDA_CHAR, self.bound, self.body)
+            }
         }
     }
 }

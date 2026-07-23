@@ -1,16 +1,23 @@
 use std::collections::HashMap;
 
-use crate::ast::{Node, expr::Assignment, node_ref::NodeRef, variable::Variable};
+use crate::ast::{Node, assignments, expr::Assignment, node_ref::NodeRef, variable::Variable};
 
 pub type Assignments = HashMap<Variable, NodeRef<Node>>;
 
-pub fn stdlib_assignment_map() -> Assignments {
+pub fn create_stdlib_assignment_map() -> Assignments {
     todo!()
 }
 
 pub fn insert_assignment(
-    assignments: &mut Assignments,
+    map: &mut Assignments,
     assignment: Assignment,
 ) -> Option<NodeRef<Node>> {
-    assignments.insert(assignment.bound, assignment.body)
+    map.insert(assignment.bound, assignment.body)
+}
+
+pub fn insert_many_assignments(
+    map: &mut Assignments,
+    assignments: Vec<Assignment>
+) -> Option<Vec<NodeRef<Node>>> {
+    assignments.into_iter().map(|a| insert_assignment(map, a)).collect()
 }

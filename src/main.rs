@@ -1,8 +1,15 @@
 #![allow(warnings, dead_code)]
 
-use std::collections::HashMap;
-
-use redex::ast::{Node, assignments::{Assignments, insert_assignment}, expr::Statement};
+use clap::Parser;
+use redex::{cli::CLIArgs, interpreter};
 
 fn main() {
+    let args = CLIArgs::parse();
+
+    interpreter::interpret(
+        r#"
+M := ab
+Lx.xyM"#,
+        &args,
+    );
 }

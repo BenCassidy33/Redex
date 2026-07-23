@@ -69,13 +69,13 @@ impl From<Statement> for NodeRef<Node> {
 }
 
 #[allow(unused)]
-struct Unzipped {
+pub struct Unzipped {
     pub(crate) assignments: Vec<Assignment>,
     pub(crate) expressions: Vec<NodeRef<Node>>,
 }
 
 #[allow(unused)]
-trait Unzip: Sized + IntoIterator<Item = Statement> {
+pub trait Unzip: Sized + IntoIterator<Item = Statement> {
     fn unzip(self) -> Unzipped {
         let (a, e): (Vec<_>, Vec<_>) = self.into_iter().partition(|n| n.is_assignment());
 
@@ -115,6 +115,9 @@ impl Statement {
 
         let mut v = Vec::new();
         for line in lines {
+            if line.is_empty() {
+                continue;
+            }
             if line.contains(":=") {
                 let (bound, body) = line.split_once(":=").unwrap();
 
