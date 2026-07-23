@@ -5,7 +5,6 @@ use anyhow::bail;
 use crate::{
     LAMBDA_CHAR,
     ast::{Node, NodeVariant, abstraction::Abstraction, node_ref::NodeRef, variable::Variable},
-    utils::group_by_delim,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -16,26 +15,6 @@ pub struct Application {
 
 impl Application {
     pub fn parse_str(s: &str) -> anyhow::Result<Application> {
-        if s.starts_with("(") {
-            let Ok(groups) = group_by_delim(s, '(', ')') else {
-                bail!("No closing ')' found!")
-            };
-
-            if groups.is_empty() {
-                bail!("Invalid application input!")
-            }
-
-            if groups.len() == 1 {
-                return Application::parse_str(groups[0]);
-            }
-
-            // group into right
-            let left = NodeRef::new(Node::parse_str(groups[0])?);
-            let right = NodeRef::new(Node::parse_str(&s[groups[0].len() + 2..])?);
-
-            return Ok(Application { left, right });
-        }
-
         if s.starts_with(LAMBDA_CHAR) {
             let left = Abstraction::parse_str(s, true)?;
             let right = Node::parse_str(&s[left.len()..])?;
@@ -48,7 +27,7 @@ impl Application {
 
         if let Ok(v) = Variable::parse_str(s) {
             if v.len() == s.len() {
-                bail!("Variable matches the length of the string!");
+                bail!("Variable '{}' matches the length of the string!", v);
             }
 
             let right = Node::parse_str(&s[v.len()..])?;

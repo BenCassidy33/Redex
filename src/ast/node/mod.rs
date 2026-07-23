@@ -1,13 +1,13 @@
 use std::fmt::Display;
 
+use anyhow::bail;
 use derive_more::IsVariant;
 
 use crate::{
-    LAMBDA_CHAR,
-    ast::{
+    LAMBDA_CHAR, ast::{
         abstraction::Abstraction, application::Application, assignments::Assignments,
         node_ref::NodeRef, variable::Variable,
-    },
+    }, utils::group_by_delim,
 };
 
 pub mod abstraction;
@@ -56,6 +56,26 @@ impl Node {
             && v.len() == s.len()
         {
             return Ok(Node::Variable(v));
+        }
+
+        if s.starts_with("(") {
+            let Ok(groups) = group_by_delim(s, '(', ')') else {
+                bail!("No closing ')' found!")
+            };
+
+            if groups.is_empty() {
+                bail!("Invalid application input!")
+            }
+
+            if groups.len() == 1 {
+                return Node::parse_str(groups[0]);
+            }
+
+            // group into right
+            let left = NodeRef::new(Node::parse_str(groups[0])?);
+            let right = NodeRef::new(Node::parse_str(&s[groups[0].len() + 2..])?);
+
+            return Ok(Node::Application(Application { left, right }));
         }
 
         Ok(Node::Application(Application::parse_str(s)?))

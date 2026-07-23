@@ -5,7 +5,7 @@ use std::io::{Write, empty, stdout};
 use derive_more::Constructor;
 
 use crate::ast::Node;
-use crate::ast::assignments::insert_many_assignments;
+use crate::ast::assignments::{insert_many_assignments, stdlib_assignments};
 use crate::ast::expr::Unzipped;
 use crate::cli::LogLevel::{AssignmentReplacements, ReductionsOnly};
 use crate::{
@@ -76,7 +76,9 @@ fn handle_assignments(
     out: &mut Out,
 ) -> anyhow::Result<()> {
     if args.loglevel >= LogLevel::Assignment {
-        writeln!(out, "{sep} Assignments {sep}", sep = "=".repeat(25))?;
+        if !statements.assignments.is_empty() {
+            writeln!(out, "{sep} Assignments {sep}", sep = "=".repeat(25))?;
+        }
 
         for assignment in &statements.assignments {
             writeln!(out, "{}", assignment)?;
@@ -118,7 +120,11 @@ fn handle_expressions(
 
 pub fn interpret(input: &str, args: &CLIArgs) -> anyhow::Result<()> {
     let mut out = Out::new(args.stdout);
-    let mut assignments: Assignments = HashMap::new();
+    let mut assignments = if args.nostdlib {
+        HashMap::new()
+    } else {
+        stdlib_assignments()
+    };
 
     let statements = Statement::parse(input)?.unzip();
     handle_assignments(&statements, &mut assignments, args, &mut out)?;
@@ -128,19 +134,19 @@ pub fn interpret(input: &str, args: &CLIArgs) -> anyhow::Result<()> {
     for hist in hists {
         if args.loglevel >= LogLevel::All {
             writeln!(out, "{sep} Expressions {sep}", sep = "=".repeat(25))?;
-            writeln!(out, "(Original)                 {:#}", hist.original)?;
+            writeln!(out, "(Original)\n\t{:#}\n", hist.original)?;
         }
 
         if args.loglevel >= AssignmentReplacements
             && let Some(sub) = hist.assignment_sub
         {
-            writeln!(out, "(Assignment Replacements)  {:#}", sub)?;
+            writeln!(out, "(Assignment Replacements)\n\t{:#}\n", sub)?;
         }
 
         if args.loglevel >= ReductionsOnly {
-            writeln!(out, "(Reductions):\n{}", hist.original)?;
+            writeln!(out, "(Reductions):\n\t{}", hist.original)?;
             for reduction in hist.reductions {
-                writeln!(out, "=> {}", reduction)?;
+                writeln!(out, "     => {}", reduction)?;
             }
         }
     }

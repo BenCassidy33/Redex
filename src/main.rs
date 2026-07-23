@@ -8,8 +8,7 @@ fn main() {
 
     interpreter::interpret(
         r#"
-M := ab
-Lx.xyM"#,
+Lx.xyU"#,
         &args,
     );
 }
