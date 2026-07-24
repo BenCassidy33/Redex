@@ -20,6 +20,7 @@ impl TryFrom<&str> for Variable {
 }
 
 impl Variable {
+
     pub fn len(&self) -> usize {
         self.ident.len()
             + if let Some(ref st) = self.subtext {
@@ -31,6 +32,15 @@ impl Variable {
             } else {
                 0
             }
+    }
+
+    #[inline]
+    pub fn parse_to_number(&self) -> Result<usize, ()> {
+        if self.subtext.is_some() {
+            return Err(());
+        }
+
+        self.ident.parse().map_err(|_| ())
     }
 
     pub fn is_empty(&self) -> bool {

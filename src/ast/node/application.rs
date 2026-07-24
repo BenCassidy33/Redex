@@ -48,22 +48,43 @@ impl Application {
         self.len() == 0
     }
 
-    pub fn reduce_self(ap: &NodeRef<Node>) {
-        let mut swap = None;
+    pub fn reduce_with(ap: &NodeRef<Node>, with: NodeRef<Node>) {
+        let Node::Application(app) = &*ap.borrow() else {
+            return;
+        };
 
-        {
+        match ap.variant() {
+            NodeVariant::Application => todo!(),
+            NodeVariant::Abstraction => Abstraction::reduce(ap, None, with),
+            NodeVariant::Variable => (),
+        }
+    }
+
+    // TODO: Redo 
+    pub fn reduce_self(ap: &NodeRef<Node>) {
+        todo!("Need to redo this. It is not reducing correctly...");
+        let swap = {
             let Node::Application(app) = &*ap.borrow() else {
-                unreachable!()
+                return;
             };
+
+            if app.left.variant() == NodeVariant::Application
+                && app.right.variant() == NodeVariant::Application
+            {
+                Node::reduce(&app.left, None, Some(app.right.clone()));
+            }
 
             if app.left.variant() == NodeVariant::Abstraction {
                 Abstraction::reduce(&app.left, None, app.right.clone());
-                swap = Some(app.left.clone());
-            } else if app.left.variant() == NodeVariant::Application {
-                Application::reduce_self(&app.left);
-                Application::reduce_self(&app.right);
-            };
-        }
+                Some(app.left.clone())
+            } else if app.right.variant() == NodeVariant::Abstraction {
+                Abstraction::reduce(&app.right, None, app.left.clone());
+                Some(app.right.clone())
+            } else {
+                Node::reduce(&app.left, None, Some(app.right.clone()));
+                None
+            }
+        };
 
         if let Some(swap) = swap {
             ap.swap(&swap);

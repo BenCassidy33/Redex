@@ -4,10 +4,9 @@ use std::io::{Write, empty, stdout};
 
 use derive_more::Constructor;
 
-use crate::ast::Node;
-use crate::ast::assignments::{insert_many_assignments, stdlib_assignments};
-use crate::ast::expr::Unzipped;
+use crate::ast::{Node, assignments::insert_many_assignments, expr::Unzipped};
 use crate::cli::LogLevel::{AssignmentReplacements, ReductionsOnly};
+use crate::stdlib::stdlib_assignments;
 use crate::{
     ast::{
         assignments::Assignments,
@@ -51,7 +50,7 @@ impl Write for Out {
 #[derive(Debug, Constructor)]
 struct NodeHist {
     original: Node,
-    assignment_sub: Option<Node>,
+    assignment_subs: Vec<Node>,
     reductions: Vec<Node>,
 }
 
@@ -61,7 +60,7 @@ impl Display for NodeHist {
             .field("original", &self.original.to_string())
             .field(
                 "assignment_sub",
-                &self.assignment_sub.as_ref().map(|s| s.to_string()),
+                &self.assignment_subs.iter().map(|s| s.to_string()),
             )
             .field("reductions", &self.reductions)
             .finish()
@@ -96,13 +95,20 @@ fn handle_expressions(
 ) -> anyhow::Result<Vec<NodeHist>> {
     let mut hists: Vec<NodeHist> = Vec::new();
     for expression in &statements.expressions {
-        let mut hist = NodeHist::new(expression.deep_clone(), None, Vec::new());
-        Node::substitute_assignments(expression, assignments, None);
+        let mut hist = NodeHist::new(expression.deep_clone(), Vec::new(), Vec::new());
 
-        if *expression != hist.original {
-            hist.assignment_sub = Some(expression.deep_clone());
+        // Node::substitute_assignments(expression, assignments, None);
+        // hist.assignment_subs.push(expression.deep_clone());
+
+        loop {
+            Node::substitute_assignments(expression, assignments, None);
+
+            if hist.assignment_subs.last().is_some_and(|last| *last == *expression.borrow()) {
+                break
+            }
+
+            hist.assignment_subs.push(expression.deep_clone());
         }
-
         while hist
             .reductions
             .last()
@@ -110,6 +116,15 @@ fn handle_expressions(
         {
             Node::reduce(expression, None, None);
             hist.reductions.push(expression.deep_clone());
+        }
+
+        loop {
+            Node::reduce(expression, None, None);
+            hist.reductions.push(expression.deep_clone());
+
+            if hist.reductions.last().is_some_and(|last| *last == *expression.borrow()) {
+                break
+            }
         }
 
         hists.push(hist);
@@ -137,14 +152,17 @@ pub fn interpret(input: &str, args: &CLIArgs) -> anyhow::Result<()> {
             writeln!(out, "(Original)\n\t{:#}\n", hist.original)?;
         }
 
-        if args.loglevel >= AssignmentReplacements
-            && let Some(sub) = hist.assignment_sub
-        {
-            writeln!(out, "(Assignment Replacements)\n\t{:#}\n", sub)?;
+        if args.loglevel >= AssignmentReplacements && !hist.assignment_subs.is_empty() {
+            writeln!(out, "(Assignment Replacements)")?;
+            for sub in hist.assignment_subs {
+                writeln!(out, "\t{:#}", sub)?;
+            }
+
+            writeln!(out)?;
         }
 
         if args.loglevel >= ReductionsOnly {
-            writeln!(out, "(Reductions):\n\t{}", hist.original)?;
+            writeln!(out, "(Reductions):")?;
             for reduction in hist.reductions {
                 writeln!(out, "     => {}", reduction)?;
             }

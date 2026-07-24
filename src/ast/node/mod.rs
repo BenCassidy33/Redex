@@ -4,10 +4,16 @@ use anyhow::bail;
 use derive_more::IsVariant;
 
 use crate::{
-    LAMBDA_CHAR, ast::{
+    LAMBDA_CHAR,
+    ast::{
         abstraction::Abstraction, application::Application, assignments::Assignments,
         node_ref::NodeRef, variable::Variable,
-    }, utils::group_by_delim,
+    },
+    stdlib::{
+        self,
+        numerals::{self, NumeralKind},
+    },
+    utils::group_by_delim,
 };
 
 pub mod abstraction;
@@ -137,7 +143,12 @@ impl Node {
     ) {
         let Some((replace, with)) = (match &*node.borrow() {
             Node::Variable(v) => {
-                if let Some(rep) = no_replace
+                if let Ok(n) = v.parse_to_number() {
+                    Some((
+                        node,
+                        &NodeRef::new(numerals::generate_numeral(n, NumeralKind::Church)),
+                    ))
+                } else if let Some(rep) = no_replace
                     && *v == *rep.borrow()
                 {
                     None
