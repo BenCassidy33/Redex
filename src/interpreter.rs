@@ -1,9 +1,8 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Display;
 use std::io::{Write, empty, stdout};
 
-use derive_more::Constructor;
-
+use crate::ast::deep_clone::NodeDeepClone;
 use crate::ast::{Node, assignments::insert_many_assignments, expr::Unzipped};
 use crate::cli::LogLevel::{AssignmentReplacements, ReductionsOnly};
 use crate::stdlib::stdlib_assignments;
@@ -47,11 +46,21 @@ impl Write for Out {
     }
 }
 
-#[derive(Debug, Constructor)]
+#[derive(Debug)]
 struct NodeHist {
-    original: Node,
-    assignment_subs: Vec<Node>,
-    reductions: Vec<Node>,
+    original: NodeDeepClone,
+    assignment_subs: Vec<NodeDeepClone>,
+    reductions: Vec<NodeDeepClone>,
+}
+
+impl NodeHist {
+    pub fn new(original: NodeDeepClone) -> Self {
+        Self {
+            original,
+            assignment_subs: Vec::new(),
+            reductions: Vec::new()
+        }
+    }
 }
 
 impl Display for NodeHist {
@@ -94,37 +103,40 @@ fn handle_expressions(
     assignments: &Assignments,
 ) -> anyhow::Result<Vec<NodeHist>> {
     let mut hists: Vec<NodeHist> = Vec::new();
-    for expression in &statements.expressions {
-        let mut hist = NodeHist::new(expression.deep_clone(), Vec::new(), Vec::new());
 
-        // Node::substitute_assignments(expression, assignments, None);
-        // hist.assignment_subs.push(expression.deep_clone());
+    for expression in &statements.expressions {
+        let mut hist = NodeHist::new(Node::deep_clone(expression));
 
         loop {
             Node::substitute_assignments(expression, assignments, None);
-
-            if hist.assignment_subs.last().is_some_and(|last| *last == *expression.borrow()) {
-                break
+            let clone = Node::deep_clone(expression);
+            if hist
+                .assignment_subs
+                .last()
+                .is_some_and(|last| *last == clone)
+            {
+                break;
             }
 
-            hist.assignment_subs.push(expression.deep_clone());
-        }
-        while hist
-            .reductions
-            .last()
-            .is_none_or(|last| *last != *expression.borrow())
-        {
-            Node::reduce(expression, None, None);
-            hist.reductions.push(expression.deep_clone());
+            hist.assignment_subs.push(clone);
         }
 
         loop {
             Node::reduce(expression, None, None);
-            hist.reductions.push(expression.deep_clone());
-
-            if hist.reductions.last().is_some_and(|last| *last == *expression.borrow()) {
-                break
+            let clone = Node::deep_clone(expression);
+            if Node::has_cycle(expression, &mut HashSet::new()) {
+                panic!("Cycle found in expression! Expression: {}", expression);
             }
+
+            if hist
+                .reductions
+                .last()
+                .is_some_and(|last| *last == clone)
+            {
+                break;
+            }
+
+            hist.reductions.push(clone);
         }
 
         hists.push(hist);

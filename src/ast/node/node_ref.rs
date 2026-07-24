@@ -5,7 +5,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::ast::{Node, NodeVariant, variable::Variable};
+use crate::ast::{Node, NodeVariant, deep_clone::NodeDeepClone, variable::Variable};
 
 #[derive(Debug, PartialEq)]
 pub struct NodeRef<T> {
@@ -55,8 +55,8 @@ impl<T> NodeRef<T> {
 
 impl NodeRef<Node> {
     #[inline]
-    pub fn deep_clone(&self) -> Node {
-        self.borrow().deep_clone()
+    pub fn deep_clone(&self) -> NodeDeepClone {
+        Node::deep_clone(self)
     }
 }
 

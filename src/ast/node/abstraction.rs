@@ -101,7 +101,8 @@ impl Abstraction {
         };
 
         if let Some(swap) = swap {
-            ab.swap(&swap);
+            let value = swap.borrow().clone();
+            ab.replace(value);
         }
     }
 }

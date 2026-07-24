@@ -62,7 +62,6 @@ impl Application {
 
     // TODO: Redo 
     pub fn reduce_self(ap: &NodeRef<Node>) {
-        todo!("Need to redo this. It is not reducing correctly...");
         let swap = {
             let Node::Application(app) = &*ap.borrow() else {
                 return;
@@ -87,7 +86,8 @@ impl Application {
         };
 
         if let Some(swap) = swap {
-            ap.swap(&swap);
+            let value = swap.borrow().clone();
+            ap.replace(value);
         }
     }
 }

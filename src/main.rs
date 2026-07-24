@@ -9,7 +9,7 @@ fn main() {
     // dbg!(generate_numeral(43, NumeralKind::Church).to_string());
 
     interpreter::interpret(
-        r#"1PLUS2"#,
+        r#"(Lm_1.(Ly.Lk.m_1))xb"#,
         &args,
     );
 }

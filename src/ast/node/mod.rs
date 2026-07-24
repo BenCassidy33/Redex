@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{collections::HashSet, fmt::Display, rc::Rc};
 
 use anyhow::bail;
 use derive_more::IsVariant;
@@ -7,10 +7,9 @@ use crate::{
     LAMBDA_CHAR,
     ast::{
         abstraction::Abstraction, application::Application, assignments::Assignments,
-        node_ref::NodeRef, variable::Variable,
+        deep_clone::NodeDeepClone, node_ref::NodeRef, variable::Variable,
     },
     stdlib::{
-        self,
         numerals::{self, NumeralKind},
     },
     utils::group_by_delim,
@@ -19,6 +18,7 @@ use crate::{
 pub mod abstraction;
 pub mod application;
 pub mod assignments;
+pub mod deep_clone;
 pub mod node_ref;
 pub mod variable;
 
@@ -195,9 +195,9 @@ impl Node {
                     && let Some(replacement) = replacement
                 {
                     Node::substitute(node, var, replacement);
+                } else {
+                    Application::reduce_self(node);
                 }
-
-                Application::reduce_self(node);
             }
 
             NodeVariant::Variable => {
@@ -210,26 +210,27 @@ impl Node {
         }
     }
 
-    pub fn deep_clone(&self) -> Node {
-        match self {
-            Node::Application(ap) => Node::Application(Application {
-                left: NodeRef::new(ap.left.borrow().deep_clone()),
-                right: NodeRef::new(ap.right.borrow().deep_clone()),
-            }),
-
-            Node::Abstraction(ab) => Node::Abstraction(Abstraction {
-                bound: NodeRef::new(ab.bound.borrow().clone()),
-                body: NodeRef::new(ab.body.borrow().deep_clone()),
-                was_curried: ab.was_curried,
-            }),
-
-            Node::Variable(v) => Node::Variable(v.clone()),
-        }
-    }
-
     #[inline]
     pub fn variant(node: &NodeRef<Self>) -> NodeVariant {
         node.into()
+    }
+
+    #[inline]
+    pub fn deep_clone(node: &NodeRef<Node>) -> NodeDeepClone {
+        NodeDeepClone::deep_clone_from(node.clone())
+    }
+
+    pub fn has_cycle(node: &NodeRef<Node>, seen: &mut HashSet<*const ()>) -> bool {
+        let ptr = Rc::as_ptr(&node.inner) as *const ();
+        if !seen.insert(ptr) {
+            return true;
+        }
+
+        match &*node.borrow() {
+            Node::Application(ap) => Node::has_cycle(&ap.left, seen) || Node::has_cycle(&ap.right, seen),
+            Node::Abstraction(ab) => Node::has_cycle(&ab.body, seen),
+            Node::Variable(_) => false,
+        }
     }
 }
 
